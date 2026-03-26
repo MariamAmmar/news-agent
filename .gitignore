@@ -1,0 +1,16 @@
+# Environment variables – never commit real credentials
+.env
+
+# Database
+*.db
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Generated newsletters
+newsletters/
+
+# macOS
+.DS_Store
