@@ -1,0 +1,33 @@
+name: Daily Newsletter
+
+on:
+  schedule:
+    - cron: '0 13 * * *'  # 9am ET (EDT, UTC-4) — adjust to '0 14 * * *' in winter (EST, UTC-5)
+  workflow_dispatch:       # allows manual trigger from GitHub UI
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run newsletter agent
+        env:
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          EMAIL_TO_GENERAL: ${{ secrets.EMAIL_TO_GENERAL }}
+          EMAIL_TO_HEALTHCARE: ${{ secrets.EMAIL_TO_HEALTHCARE }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python main.py
