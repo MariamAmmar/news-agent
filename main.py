@@ -33,6 +33,7 @@ def _parse_recipients(env_var: str, fallback_var: str = "EMAIL_TO") -> list[str]
 def _run_newsletter(
     topic: str,
     label: str,
+    newsletter_name: str,
     recipients: list[str],
     db_path: str,
     days_back: int,
@@ -58,7 +59,7 @@ def _run_newsletter(
     key_takeaway = result["takeaway"]
     stories = result["stories"]
     print(f"  Takeaway: {key_takeaway[:80]}...")
-    content = generate_newsletter(stories, key_takeaway=key_takeaway, db_path=db_path, unsubscribe_email=unsubscribe_email)
+    content = generate_newsletter(stories, key_takeaway=key_takeaway, db_path=db_path, unsubscribe_email=unsubscribe_email, newsletter_name=newsletter_name)
     print(f"  Subject: {content['subject']}")
 
     print(f"\n{'=' * 60}")
@@ -105,6 +106,7 @@ def main() -> None:
     ok = _run_newsletter(
         topic="general",
         label="General AI",
+        newsletter_name="AI News",
         recipients=general_recipients,
         db_path=db_path,
         days_back=days_back,
@@ -120,6 +122,7 @@ def main() -> None:
     ok = _run_newsletter(
         topic="healthcare",
         label="Healthcare AI",
+        newsletter_name="Healthcare AI News",
         recipients=healthcare_recipients,
         db_path=db_path,
         days_back=days_back,

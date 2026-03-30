@@ -94,7 +94,7 @@ def _html_section(category: str, articles: List[Dict[str, Any]]) -> str:
     </div>"""
 
 
-def build_html(stories: List[Dict[str, Any]], date_str: str, key_takeaway: str = "", unsubscribe_email: str = "") -> str:
+def build_html(stories: List[Dict[str, Any]], date_str: str, key_takeaway: str = "", unsubscribe_email: str = "", newsletter_name: str = "AI News") -> str:
     # Group articles by category, preserving score order within each group
     category_order = ["People", "Processes", "Tech"]
     grouped: Dict[str, List[Dict[str, Any]]] = {c: [] for c in category_order}
@@ -132,7 +132,7 @@ def build_html(stories: List[Dict[str, Any]], date_str: str, key_takeaway: str =
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>AI News Briefing – {date_str}</title>
+  <title>{newsletter_name} Briefing – {date_str}</title>
 </head>
 <body style="margin:0;padding:0;background:#f2f2f2;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#f2f2f2;padding:32px 0;">
@@ -142,7 +142,7 @@ def build_html(stories: List[Dict[str, Any]], date_str: str, key_takeaway: str =
         <tr>
           <td style="background:#0057FF;padding:22px 32px;">
             <p style="margin:0;color:#cce0ff;font-size:11px;letter-spacing:1px;text-transform:uppercase;font-family:Arial,sans-serif;">Daily Briefing</p>
-            <h1 style="margin:4px 0 0;color:#fff;font-size:26px;font-weight:bold;font-family:Georgia,serif;">AI News</h1>
+            <h1 style="margin:4px 0 0;color:#fff;font-size:26px;font-weight:bold;font-family:Georgia,serif;">{newsletter_name}</h1>
             <p style="margin:6px 0 0;color:#a8c8ff;font-size:13px;font-family:Arial,sans-serif;">{date_str}</p>
           </td>
         </tr>
@@ -155,7 +155,7 @@ def build_html(stories: List[Dict[str, Any]], date_str: str, key_takeaway: str =
         <tr>
           <td style="padding:16px 32px;background:#f8f8f8;border-top:1px solid #ececec;">
             <p style="margin:0;font-size:11px;color:#aaa;text-align:center;font-family:Arial,sans-serif;">
-              AI News Briefing &middot; {date_str}
+              {newsletter_name} Briefing &middot; {date_str}
             </p>
             {unsubscribe_html}
           </td>
@@ -171,9 +171,9 @@ def build_html(stories: List[Dict[str, Any]], date_str: str, key_takeaway: str =
 # Plain text rendering
 # ---------------------------------------------------------------------------
 
-def build_text(stories: List[Dict[str, Any]], date_str: str, key_takeaway: str = "", unsubscribe_email: str = "") -> str:
+def build_text(stories: List[Dict[str, Any]], date_str: str, key_takeaway: str = "", unsubscribe_email: str = "", newsletter_name: str = "AI News") -> str:
     lines = [
-        f"AI NEWS BRIEFING — {date_str}",
+        f"{newsletter_name.upper()} BRIEFING — {date_str}",
         "=" * 60,
         "",
     ]
@@ -274,11 +274,12 @@ def generate_newsletter(
     key_takeaway: str = "",
     db_path: str = "ai_news.db",
     unsubscribe_email: str = "",
+    newsletter_name: str = "AI News",
 ) -> Dict[str, str]:
     """Build HTML + plain text, save to disk, and return the content dict."""
     date_str = datetime.now(timezone.utc).strftime("%A, %B %-d, %Y")
-    subject = f"AI News Briefing – {date_str}"
-    html = build_html(stories, date_str, key_takeaway, unsubscribe_email)
-    text = build_text(stories, date_str, key_takeaway, unsubscribe_email)
+    subject = f"{newsletter_name} Briefing – {date_str}"
+    html = build_html(stories, date_str, key_takeaway, unsubscribe_email, newsletter_name)
+    text = build_text(stories, date_str, key_takeaway, unsubscribe_email, newsletter_name)
     save_newsletter(html, text, stories, subject, db_path)
     return {"subject": subject, "html": html, "text": text}
