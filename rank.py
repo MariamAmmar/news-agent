@@ -250,6 +250,84 @@ def _select_by_category(
 
 
 # ---------------------------------------------------------------------------
+# ICYMI selection
+# ---------------------------------------------------------------------------
+
+def select_icymi(
+    db_path: str = "ai_news.db",
+    exclude_ids: Optional[set] = None,
+    days_back: int = 14,
+    topic: str = "general",
+) -> Optional[Dict[str, Any]]:
+    """
+    Return one high-impact article from the past *days_back* days that did
+    not make the main story selection (exclude_ids) and hasn't been featured
+    in the last 3 days (softer than the main 7-day penalty so genuinely
+    major stories can resurface once).
+
+    Returns None if no suitable article is found.
+    """
+    if exclude_ids is None:
+        exclude_ids = set()
+
+    conn = get_connection(db_path)
+    now = datetime.now(timezone.utc)
+    since = (now - timedelta(days=days_back)).isoformat()
+
+    rows = conn.execute(
+        """
+        SELECT id, title, url, source, bucket, published_at, summary,
+               featured_at, paywalled_flag, category_candidate,
+               accessible, why_it_matters
+        FROM articles
+        WHERE fetched_at >= ?
+        ORDER BY fetched_at DESC
+        """,
+        (since,),
+    ).fetchall()
+    conn.close()
+
+    articles = [dict(row) for row in rows]
+    if not articles:
+        return None
+
+    # Exclude main story picks and articles featured in the last 3 days
+    candidates = []
+    for a in articles:
+        if a["id"] in exclude_ids:
+            continue
+        featured_at = a.get("featured_at")
+        if featured_at:
+            try:
+                ft = datetime.fromisoformat(featured_at.replace("Z", "+00:00"))
+                if (now - ft.astimezone(timezone.utc)).days < 3:
+                    continue
+            except Exception:
+                pass
+        candidates.append(a)
+
+    if not candidates:
+        return None
+
+    if topic == "healthcare":
+        candidates = [a for a in candidates if _is_healthcare(a)]
+        if not candidates:
+            return None
+
+    _add_cross_source_scores(candidates)
+    for a in candidates:
+        # Use a modified score that ignores the repeat-featured penalty
+        # (we already filtered by featured_at above)
+        a["_icymi_score"] = score_article(a, now) + 5  # offset the featured penalty
+    candidates.sort(key=lambda a: a["_icymi_score"], reverse=True)
+    candidates = deduplicate_by_headline(candidates)
+
+    best = candidates[0]
+    best["_category"] = classify_category(best.get("title", ""), best.get("summary") or "")
+    return best
+
+
+# ---------------------------------------------------------------------------
 # Public entry point
 # ---------------------------------------------------------------------------
 

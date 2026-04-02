@@ -18,7 +18,7 @@ load_dotenv()
 
 from fetch_sources import fetch_and_store
 from newsletter import generate_newsletter
-from rank import select_stories
+from rank import select_stories, select_icymi
 from send_email import send_newsletter
 from summarize import enrich_stories
 from unsubscribe import process_unsubscribes
@@ -51,6 +51,10 @@ def _run_newsletter(
         print(f"\n  [{label}] No articles found. Skipping.")
         return True
 
+    icymi = select_icymi(db_path, exclude_ids={a["id"] for a in stories}, topic=topic)
+    if icymi:
+        print(f"  ICYMI: {icymi['title'][:70]}")
+
     print(f"\n{'=' * 60}")
     print(f"  [{label}] Generating newsletter")
     print("=" * 60)
@@ -59,7 +63,7 @@ def _run_newsletter(
     key_takeaway = result["takeaway"]
     stories = result["stories"]
     print(f"  Takeaway: {key_takeaway[:80]}...")
-    content = generate_newsletter(stories, key_takeaway=key_takeaway, db_path=db_path, unsubscribe_email=unsubscribe_email, newsletter_name=newsletter_name)
+    content = generate_newsletter(stories, key_takeaway=key_takeaway, db_path=db_path, unsubscribe_email=unsubscribe_email, newsletter_name=newsletter_name, icymi=icymi)
     print(f"  Subject: {content['subject']}")
 
     print(f"\n{'=' * 60}")

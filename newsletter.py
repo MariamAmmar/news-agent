@@ -94,7 +94,34 @@ def _html_section(category: str, articles: List[Dict[str, Any]]) -> str:
     </div>"""
 
 
-def build_html(stories: List[Dict[str, Any]], date_str: str, key_takeaway: str = "", unsubscribe_email: str = "", newsletter_name: str = "AI News") -> str:
+def _html_icymi(article: Dict[str, Any]) -> str:
+    title = article["title"]
+    url = article["url"]
+    source = article.get("source") or ""
+    summary = _clean(article.get("summary") or "", 220)
+    wim = _clean(article.get("_why_it_matters_ai") or article.get("why_it_matters") or "", 240)
+    why_html = (
+        f'<p style="margin:5px 0 0;font-size:12px;color:#5570a0;font-style:italic;'
+        f'font-family:Arial,sans-serif;line-height:1.5;">'
+        f'<strong>Why it matters:</strong> {wim}</p>'
+        if wim else ""
+    )
+    return f"""\
+    <div style="margin-top:28px;border-top:2px dashed #dde6ff;padding-top:20px;">
+      <p style="margin:0 0 10px;font-size:10px;font-weight:bold;letter-spacing:1px;
+                text-transform:uppercase;color:#5570a0;font-family:Arial,sans-serif;">
+        In Case You Missed It
+      </p>
+      <h3 style="margin:0 0 5px;font-size:15px;line-height:1.4;font-family:Georgia,serif;">
+        <a href="{url}" style="color:#111;text-decoration:none;">{title}</a>
+      </h3>
+      <p style="margin:0;font-size:12px;color:#555;line-height:1.5;font-family:Arial,sans-serif;">{summary}</p>
+      {why_html}
+      <p style="margin:5px 0 0;font-size:11px;color:#aaa;font-family:Arial,sans-serif;">{source}</p>
+    </div>"""
+
+
+def build_html(stories: List[Dict[str, Any]], date_str: str, key_takeaway: str = "", unsubscribe_email: str = "", newsletter_name: str = "AI News", icymi: Dict[str, Any] = None) -> str:
     # Group articles by category, preserving score order within each group
     category_order = ["People", "Processes", "Tech"]
     grouped: Dict[str, List[Dict[str, Any]]] = {c: [] for c in category_order}
@@ -118,6 +145,8 @@ def build_html(stories: List[Dict[str, Any]], date_str: str, key_takeaway: str =
         f'</td></tr>'
         if key_takeaway else ""
     )
+
+    icymi_html = _html_icymi(icymi) if icymi else ""
 
     body = "Please remove me from this newsletter."
     unsubscribe_html = (
@@ -150,6 +179,7 @@ def build_html(stories: List[Dict[str, Any]], date_str: str, key_takeaway: str =
         <tr>
           <td style="padding:30px 32px 24px;">
             {sections_html}
+            {icymi_html}
           </td>
         </tr>
         <tr>
@@ -171,7 +201,7 @@ def build_html(stories: List[Dict[str, Any]], date_str: str, key_takeaway: str =
 # Plain text rendering
 # ---------------------------------------------------------------------------
 
-def build_text(stories: List[Dict[str, Any]], date_str: str, key_takeaway: str = "", unsubscribe_email: str = "", newsletter_name: str = "AI News") -> str:
+def build_text(stories: List[Dict[str, Any]], date_str: str, key_takeaway: str = "", unsubscribe_email: str = "", newsletter_name: str = "AI News", icymi: Dict[str, Any] = None) -> str:
     lines = [
         f"{newsletter_name.upper()} BRIEFING — {date_str}",
         "=" * 60,
@@ -211,6 +241,21 @@ def build_text(stories: List[Dict[str, Any]], date_str: str, key_takeaway: str =
             if wim:
                 lines.append(f"Why it matters: {wim}")
             lines.append("")
+
+    if icymi:
+        wim = _clean(icymi.get("_why_it_matters_ai") or icymi.get("why_it_matters") or "")
+        summary = _clean(icymi.get("summary") or "", 220)
+        lines += [
+            "",
+            "IN CASE YOU MISSED IT",
+            "-" * 40,
+            icymi["title"],
+            icymi["url"],
+            summary,
+        ]
+        if wim:
+            lines.append(f"Why it matters: {wim}")
+        lines.append("")
 
     lines.append("=" * 60)
     if unsubscribe_email:
@@ -275,11 +320,12 @@ def generate_newsletter(
     db_path: str = "ai_news.db",
     unsubscribe_email: str = "",
     newsletter_name: str = "AI News",
+    icymi: Dict[str, Any] = None,
 ) -> Dict[str, str]:
     """Build HTML + plain text, save to disk, and return the content dict."""
     date_str = datetime.now(timezone.utc).strftime("%A, %B %-d, %Y")
     subject = f"{newsletter_name} Briefing – {date_str}"
-    html = build_html(stories, date_str, key_takeaway, unsubscribe_email, newsletter_name)
-    text = build_text(stories, date_str, key_takeaway, unsubscribe_email, newsletter_name)
+    html = build_html(stories, date_str, key_takeaway, unsubscribe_email, newsletter_name, icymi)
+    text = build_text(stories, date_str, key_takeaway, unsubscribe_email, newsletter_name, icymi)
     save_newsletter(html, text, stories, subject, db_path)
     return {"subject": subject, "html": html, "text": text}
